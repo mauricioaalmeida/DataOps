@@ -1,0 +1,145 @@
+
+services:
+  postgres:
+    build:
+      context: ./postgres
+      dockerfile: Dockerfile
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  airflow:
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    container_name: airflow
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:mysecretpassword@postgres:5432/airflow
+    depends_on:
+      - postgres
+
+  pyspark:
+    image: jupyter/all-spark-notebook
+    container_name: pyspark
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/_MAA/Desenv/DataScience/DataOps/notebooks
+      - data_volume:/data
+    healthcheck:
+      test: ["CMD-SHELL", "jupyter kernelspec list | grep -q pyspark"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - airflow
+
+  postgres_admin:
+    image: adminer:latest
+    container_name: postgres_admin
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data: ./data/db
+  data_volume: ./notebooks
+# https://karlchris.github.io/data-engineering/projects/spark-docker/#spark-containers-and-components
+services:
+  spark-master:
+    container_name: spark-master
+    build: .
+    image: spark-image
+    entrypoint: ['./entrypoint.sh', 'master']
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080" ]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - ./scripts:/opt/spark/scripts
+      - ./data:/opt/spark/data
+      - spark-logs:/opt/spark/spark-events
+    env_file:
+      - .env.spark
+    ports:
+      - '8080:8080'
+      - '7077:7077'
+
+  spark-history-server:
+    container_name: spark-history
+    image: spark-image
+    entrypoint: ['./entrypoint.sh', 'history']
+    depends_on:
+      - spark-master
+    env_file:
+      - .env.spark
+    volumes:
+      - ./scripts:/opt/spark/scripts
+      - ./data:/opt/spark/data
+      - spark-logs:/opt/spark/spark-events
+    ports:
+      - '18080:18080'
+
+  spark-worker:
+    container_name: spark-worker
+    image: spark-image
+    entrypoint: ['./entrypoint.sh', 'worker']
+    depends_on:
+      - spark-master
+    env_file:
+      - .env.spark
+    volumes:
+      - ./scripts:/opt/spark/scripts
+      - ./data:/opt/spark/data
+      - spark-logs:/opt/spark/spark-events
+
+volumes:
+  spark-logs:
+
+
+#https://towardsdatascience.com/end-to-end-data-engineering-system-on-real-data-with-kafka-spark-airflow-postgres-and-docker-a70e18df4090/
+kafka:
+    image: 'bitnami/kafka:latest'
+    ports:
+      - '9094:9094'
+    networks:
+      - airflow-kafka
+    environment:
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+    volumes:
+      - ./kafka:/bitnami/kafka
+
+  kafka-ui:
+    container_name: kafka-ui-1
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8800:8080  
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: PLAINTEXT://kafka:9092
+      DYNAMIC_CONFIG_ENABLED: 'true'
+    networks:
+      - airflow-kafka
+
+networks:
+  airflow-kafka:
+    external: true
