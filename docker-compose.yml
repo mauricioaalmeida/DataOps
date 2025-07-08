@@ -1,145 +1,177 @@
+version: '3.8'
 
 services:
+  # PostgreSQL Database
   postgres:
-    build:
-      context: ./postgres
-      dockerfile: Dockerfile
-    container_name: postgres
+    image: postgres:16
+    env_file:
+      - .env
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - ds-network
 
+  # PgAdmin for PostgreSQL administration
+  pgadmin:
+    image: dpage/pgadmin4:8
+    env_file:
+      - .env
+    ports:
+      - "5050:80"
+    volumes:
+      - ./pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ds-network
+
+  # Apache Airflow
   airflow:
-    build:
-      context: ./airflow
-      dockerfile: Dockerfile
-    container_name: airflow
+    image: apache/airflow:2.10.2
+    env_file:
+      - .env
     ports:
       - "8080:8080"
-    environment:
-      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:mysecretpassword@postgres:5432/airflow
+    volumes:
+      - ./airflow_dags:/opt/airflow/dags
+      - ./airflow_logs:/opt/airflow/logs
+      - ./airflow_plugins:/opt/airflow/plugins
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    command: >
+      bash -c "airflow db init && 
+               airflow users create --username admin --password $AIRFLOW_ADMIN_PASSWORD --firstname Admin --lastname User --role Admin --email admin@example.com && 
+               airflow webserver"
+    networks:
+      - ds-network
 
-  pyspark:
-    image: jupyter/all-spark-notebook
-    container_name: pyspark
+  # Spark Master
+  spark-master:
+    image: bitnami/spark:3.5
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+    ports:
+      - "7077:7077"
+      - "8081:8080"
+    volumes:
+      - ./spark_data:/opt/bitnami/spark/data
+    networks:
+      - ds-network
+
+  # Spark History Server
+  spark-history:
+    image: bitnami/spark:3.5
+    environment:
+      - SPARK_MODE=history
+      - SPARK_HISTORY_OPTS="-Dspark.history.fs.logDirectory=/opt/bitnami/spark/logs"
+    ports:
+      - "18080:18080"
+    volumes:
+      - ./spark_logs:/opt/bitnami/spark/logs
+    depends_on:
+      - spark-master
+    networks:
+      - ds-network
+
+  # Spark Worker
+  spark-worker:
+    image: bitnami/spark:3.5
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=2g
+      - SPARK_WORKER_CORES=2
+    volumes:
+      - ./spark_data:/opt/bitnami/spark/data
+    depends_on:
+      - spark-master
+    networks:
+      - ds-network
+
+  # Kafka
+  kafka:
+    image: confluentinc/cp-kafka:7.7.0
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    ports:
+      - "9092:9092"
+    volumes:
+      - ./kafka_data:/var/lib/kafka/data
+    depends_on:
+      - zookeeper
+    networks:
+      - ds-network
+
+  # Zookeeper for Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.7.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - ./zookeeper_data:/var/lib/zookeeper/data
+    networks:
+      - ds-network
+
+  # Kafka UI
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    ports:
+      - "8082:8080"
+    depends_on:
+      - kafka
+      - zookeeper
+    networks:
+      - ds-network
+
+  # Jupyter Notebook with Python and R
+  jupyter:
+    image: jupyter/datascience-notebook:latest
+    env_file:
+      - .env
     ports:
       - "8888:8888"
     volumes:
-      - ./notebooks:/_MAA/Desenv/DataScience/DataOps/notebooks
-      - data_volume:/data
-    healthcheck:
-      test: ["CMD-SHELL", "jupyter kernelspec list | grep -q pyspark"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    depends_on:
-      - airflow
-
-  postgres_admin:
-    image: adminer:latest
-    container_name: postgres_admin
-    ports:
-      - "8081:8080"
-    depends_on:
-      - postgres
+      - ./notebooks:/home/jovyan/work
+      - ./scripts:/home/jovyan/scripts
+    networks:
+      - ds-network
 
 volumes:
-  postgres_data: ./data/db
-  data_volume: ./notebooks
-# https://karlchris.github.io/data-engineering/projects/spark-docker/#spark-containers-and-components
-services:
-  spark-master:
-    container_name: spark-master
-    build: .
-    image: spark-image
-    entrypoint: ['./entrypoint.sh', 'master']
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080" ]
-      interval: 5s
-      timeout: 3s
-      retries: 3
-    volumes:
-      - ./scripts:/opt/spark/scripts
-      - ./data:/opt/spark/data
-      - spark-logs:/opt/spark/spark-events
-    env_file:
-      - .env.spark
-    ports:
-      - '8080:8080'
-      - '7077:7077'
-
-  spark-history-server:
-    container_name: spark-history
-    image: spark-image
-    entrypoint: ['./entrypoint.sh', 'history']
-    depends_on:
-      - spark-master
-    env_file:
-      - .env.spark
-    volumes:
-      - ./scripts:/opt/spark/scripts
-      - ./data:/opt/spark/data
-      - spark-logs:/opt/spark/spark-events
-    ports:
-      - '18080:18080'
-
-  spark-worker:
-    container_name: spark-worker
-    image: spark-image
-    entrypoint: ['./entrypoint.sh', 'worker']
-    depends_on:
-      - spark-master
-    env_file:
-      - .env.spark
-    volumes:
-      - ./scripts:/opt/spark/scripts
-      - ./data:/opt/spark/data
-      - spark-logs:/opt/spark/spark-events
-
-volumes:
-  spark-logs:
-
-
-#https://towardsdatascience.com/end-to-end-data-engineering-system-on-real-data-with-kafka-spark-airflow-postgres-and-docker-a70e18df4090/
-kafka:
-    image: 'bitnami/kafka:latest'
-    ports:
-      - '9094:9094'
-    networks:
-      - airflow-kafka
-    environment:
-      - KAFKA_CFG_NODE_ID=0
-      - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-    volumes:
-      - ./kafka:/bitnami/kafka
-
-  kafka-ui:
-    container_name: kafka-ui-1
-    image: provectuslabs/kafka-ui:latest
-    ports:
-      - 8800:8080  
-    depends_on:
-      - kafka
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: PLAINTEXT://kafka:9092
-      DYNAMIC_CONFIG_ENABLED: 'true'
-    networks:
-      - airflow-kafka
+  postgres_data:
+  pgadmin_data:
+  airflow_dags:
+  airflow_logs:
+  airflow_plugins:
+  spark_data:
+  spark_logs:
+  kafka_data:
+  zookeeper_data:
+  notebooks:
+  scripts:
 
 networks:
-  airflow-kafka:
-    external: true
+  ds-network:
+    driver: bridge
