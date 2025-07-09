@@ -8,17 +8,9 @@ Este documento descreve a arquitetura do ambiente de desenvolvimento para ciênc
 O **Ambiente de Desenvolvimento para Ciência de Dados** é um sistema local que fornece uma plataforma integrada para cientistas de dados realizarem ingestão, processamento, orquestração e análise de dados. Usuários interagem com interfaces web (Airflow, Jupyter, PgAdmin, Kafka UI, MinIO) e APIs (Kafka, MinIO) para gerenciar pipelines, armazenar dados e realizar análises.
 
 ### Diagrama
-```plantuml
-@startuml
-!define RECTANGLE class
-
-actor "Cientista de Dados" as User
-
-RECTANGLE "Ambiente de Desenvolvimento para Ciência de Dados" as System {
-  :APIs e Interfaces Web; --> [User] : Gerencia pipelines, analisa dados, armazena arquivos
-}
-
-@enduml
+```mermaid
+graph TD
+    A[Cientista de Dados] -->|Gerencia pipelines, analisa dados, armazena arquivos| B[Ambiente de Desenvolvimento para Ciência de Dados]
 ```
 
 ---
@@ -41,45 +33,35 @@ O sistema é composto por contêineres Docker conectados via uma rede (`ds-netwo
 - **MinIO**: Armazenamento S3-compatível para arquivos compartilhados e backups.
 
 ### Diagrama
-```plantuml
-@startuml
-!define RECTANGLE class
-
-actor "Cientista de Dados" as User
-
-package "Ambiente de Desenvolvimento para Ciência de Dados" {
-  [PostgreSQL] #--> [PgAdmin] : Gerenciamento via web
-  [PostgreSQL] #--> [Airflow] : Armazena metadados
-  [Airflow] #--> [MinIO] : Armazena/Recupera arquivos via S3
-  [Airflow] #--> [Shared Folder] : Acessa arquivos compartilhados
-  [Airflow] #--> [Delta Lake] : Processa dados versionados
-  [Spark Master] #--> [Spark Worker] : Gerencia jobs
-  [Spark Master] #--> [MinIO] : Armazena/Recupera arquivos via S3
-  [Spark Master] #--> [Shared Folder] : Acessa arquivos compartilhados
-  [Spark Master] #--> [Delta Lake] : Processa dados versionados
-  [Spark Worker] #--> [MinIO] : Armazena/Recupera arquivos via S3
-  [Spark Worker] #--> [Shared Folder] : Acessa arquivos compartilhados
-  [Spark Worker] #--> [Delta Lake] : Processa dados versionados
-  [Spark History] #--> [Spark Master] : Acessa logs
-  [Kafka] #--> [Zookeeper] : Coordenação
-  [Kafka UI] #--> [Kafka] : Monitoramento via web
-  [Kafka UI] #--> [Zookeeper] : Acessa metadados
-  [Jupyter] #--> [MinIO] : Armazena/Recupera arquivos via S3
-  [Jupyter] #--> [Shared Folder] : Acessa arquivos compartilhados
-  [Jupyter] #--> [Delta Lake] : Processa dados versionados
-  [MinIO] : Armazenamento S3
-  [Shared Folder] : Pasta compartilhada
-  [Delta Lake] : Dados versionados (Bronze, Silver, Gold)
-}
-
-User --> [PgAdmin] : Gerencia banco
-User --> [Airflow] : Orquestra pipelines
-User --> [Kafka UI] : Monitora streaming
-User --> [Jupyter] : Analisa dados
-User --> [MinIO] : Gerencia armazenamento
-User --> [Spark Master] : Monitora jobs
-
-@enduml
+```mermaid
+graph TD
+    A[Cientista de Dados]
+    subgraph Ambiente de Desenvolvimento para Ciência de Dados
+        B[PostgreSQL] -->|Gerenciamento via web| C[PgAdmin]
+        B -->|Armazena metadados| D[Airflow]
+        D -->|Armazena/Recupera arquivos via S3| E[MinIO]
+        D -->|Acessa arquivos compartilhados| F[Shared Folder]
+        D -->|Processa dados versionados| G[Delta Lake]
+        H[Kafka] -->|Coordenação| I[Zookeeper]
+        I -->|Metadados| J[Kafka UI]
+        K[Spark Master] -->|Gerencia jobs| L[Spark Worker]
+        K -->|Armazena/Recupera arquivos via S3| E
+        K -->|Acessa arquivos compartilhados| F
+        K -->|Processa dados versionados| G
+        L -->|Armazena/Recupera arquivos via S3| E
+        L -->|Acessa arquivos compartilhados| F
+        L -->|Processa dados versionados| G
+        M[Spark History] -->|Acessa logs| K
+        N[Jupyter] -->|Armazena/Recupera arquivos via S3| E
+        N -->|Acessa arquivos compartilhados| F
+        N -->|Processa dados versionados| G
+    end
+    A -->|Gerencia banco| C
+    A -->|Orquestra pipelines| D
+    A -->|Monitora streaming| J
+    A -->|Analisa dados| N
+    A -->|Gerencia armazenamento| E
+    A -->|Monitora jobs| K
 ```
 
 ---
@@ -106,40 +88,34 @@ Este nível detalha componentes internos de contêineres críticos: Airflow, Spa
   - **S3 Client**: Acessa MinIO via S3 API.
 
 ### Diagrama
-```plantuml
-@startuml
-!define RECTANGLE class
-
-package "Airflow" {
-  [Webserver] --> [Scheduler] : Inicia/monitora tarefas
-  [Scheduler] --> [PostgreSQL] : Armazena metadados
-  [Scheduler] --> [DAGs] : Executa pipelines
-  [DAGs] --> [MinIO] : Armazena/Recupera arquivos
-  [DAGs] --> [Shared Folder] : Acessa arquivos
-  [DAGs] --> [Delta Lake] : Processa dados
-}
-
-package "Spark" {
-  [Master] --> [Worker] : Aloca tarefas
-  [Worker] --> [Delta Lake Connector] : Processa dados
-  [Worker] --> [S3 Connector] : Acessa MinIO
-  [Delta Lake Connector] --> [Delta Lake] : Armazena dados versionados
-  [S3 Connector] --> [MinIO] : Armazena/Recupera arquivos
-  [S3 Connector] --> [Shared Folder] : Acessa arquivos
-}
-
-package "Jupyter" {
-  [Notebook Server] --> [Delta Lake Client] : Processa dados
-  [Notebook Server] --> [S3 Client] : Acessa MinIO
-  [Delta Lake Client] --> [Delta Lake] : Armazena dados versionados
-  [S3 Client] --> [MinIO] : Armazena/Recupera arquivos
-  [S3 Client] --> [Shared Folder] : Acessa arquivos
-}
-
-[Cientista de Dados] --> [Webserver] : Gerencia pipelines
-[Cientista de Dados] --> [Notebook Server] : Analisa dados
-
-@enduml
+```mermaid
+graph TD
+    A[Cientista de Dados]
+    subgraph Airflow
+        B[Webserver] -->|Inicia/monitora tarefas| C[Scheduler]
+        C -->|Armazena metadados| D[PostgreSQL]
+        C -->|Executa pipelines| E[DAGs]
+        E -->|Armazena/Recupera arquivos| F[MinIO]
+        E -->|Acessa arquivos| G[Shared Folder]
+        E -->|Processa dados| H[Delta Lake]
+    end
+    subgraph Spark
+        I[Master] -->|Aloca tarefas| J[Worker]
+        J -->|Processa dados| K[Delta Lake Connector]
+        J -->|Acessa MinIO| L[S3 Connector]
+        K -->|Armazena dados versionados| H
+        L -->|Armazena/Recupera arquivos| F
+        L -->|Acessa arquivos| G
+    end
+    subgraph Jupyter
+        M[Notebook Server] -->|Processa dados| N[Delta Lake Client]
+        M -->|Acessa MinIO| O[S3 Client]
+        N -->|Armazena dados versionados| H
+        O -->|Armazena/Recupera arquivos| F
+        O -->|Acessa arquivos| G
+    end
+    A -->|Gerencia pipelines| B
+    A -->|Analisa dados| M
 ```
 
 ---
@@ -168,6 +144,6 @@ Consulte o `README.md` (artifact ID: `1f7812b6-cb26-4837-877a-54116d6d6652`) par
 
 <div align="center">
     <h3>Desenvolvido por Mauricio A. Almeida</h3>
-    <a href="https://github.com/mauricioaalmeida"><img src="https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white" alt="GitHub"></a>
-    <a href="https://linkedin.com/in/mauricioaalmeida"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+    <a href="https://github.com/mauricioaalmeida"><img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=FFFFFF" alt="GitHub"></a>
+    <a href="https://linkedin.com/in/mauricioaalmeida"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat-square&logo=linkedin&logoColor=FFFFFF" alt="LinkedIn"></a>
 </div>

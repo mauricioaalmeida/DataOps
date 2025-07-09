@@ -72,14 +72,24 @@ Este projeto configura um ambiente de desenvolvimento para ciência de dados uti
   - MinIO: `9000` (API), `9001` (Console)
 
 ### Diagrama
-```
-[PostgreSQL:5432] <-> [PgAdmin:5050]
-    |                [Airflow:8080] <-> [Shared Folder] <-> [Delta Lake]
-[Kafka:9092] <-> [Zookeeper:2181] <-> [Kafka UI:8082]
-[Spark Master:7077,8081] <-> [Spark Worker] <-> [Shared Folder] <-> [Delta Lake]
-    |                        [Spark History:18080]
-[Jupyter:8888] <-> [Shared Folder] <-> [Delta Lake]
-[MinIO:9000,9001] <-> [All Services via S3 API]
+```mermaid
+graph TD
+    A[PostgreSQL:5432] -->|Gerenciamento| B[PgAdmin:5050]
+    A -->|Metadados| C[Airflow:8080]
+    C -->|Acessa| D[Shared Folder]
+    C -->|Processa| E[Delta Lake]
+    F[Kafka:9092] -->|Coordenação| G[Zookeeper:2181]
+    G -->|Metadados| H[Kafka UI:8082]
+    I[Spark Master:7077,8081] -->|Gerencia| J[Spark Worker]
+    J -->|Acessa| D
+    J -->|Processa| E
+    I -->|Logs| K[Spark History:18080]
+    L[Jupyter:8888] -->|Acessa| D
+    L -->|Processa| E
+    M[MinIO:9000,9001] -->|S3 API| C
+    M -->|S3 API| I
+    M -->|S3 API| J
+    M -->|S3 API| L
 ```
 
 ---
