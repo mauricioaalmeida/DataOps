@@ -33,7 +33,8 @@ services:
   
   # Airflow Scheduler: Handles DB initialization, user creation, and task scheduling
   airflow-scheduler:
-    image: apache/airflow:2.10.2
+    build:
+      context: ./docker/airflow
     env_file:
       - .env
     volumes:
@@ -59,7 +60,8 @@ services:
 
   # Airflow Webserver: The UI for Airflow
   airflow-webserver:
-    image: apache/airflow:2.10.2
+    build:
+      context: ./docker/airflow
     env_file:
       - .env
     ports:
@@ -187,7 +189,8 @@ services:
 
   # Jupyter Notebook with Python and R
   jupyter:
-    image: jupyter/datascience-notebook:latest
+    build:
+      context: ./docker/jupyter
     env_file:
       - .env
     environment:
