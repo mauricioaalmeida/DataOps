@@ -1,8 +1,32 @@
 <div align="center">
     <h1>Ambiente de Desenvolvimento para Ciência de Dados</h1>
     <p>Um ambiente local completo para ciência de dados com Docker Compose, integrando ferramentas para armazenamento, processamento, orquestração e análise.</p>
-    <img src="https://img.shields.io/badge/-Docker%20|%20PostgreSQL%20|%20Airflow%20|%20Spark%20|%20Kafka%20|%20Jupyter%20|%20MinIO%20|%20License:%20MIT%20|%20Version:%201.0-000000?logo=docker&style=flat&logoColor=white&labelColor=2496ED" alt="Tools and Metadata">
+    <img src="https://img.shields.io/badge/Docker-0DB7ED?style=flat-square&logo=docker&logoColor=0DB7ED&labelColor=2E2E2E&color=0DB7ED" alt="Docker">
+    <img src="https://img.shields.io/badge/PostgreSQL-0DB7ED?style=flat-square&logo=postgresql&logoColor=336791&labelColor=2E2E2E&color=0DB7ED" alt="PostgreSQL">
+    <img src="https://img.shields.io/badge/Airflow-0DB7ED?style=flat-square&logo=apache-airflow&logoColor=007A87&labelColor=2E2E2E&color=0DB7ED" alt="Airflow">
+    <img src="https://img.shields.io/badge/Spark-0DB7ED?style=flat-square&logo=apache-spark&logoColor=E25A1C&labelColor=2E2E2E&color=0DB7ED" alt="Spark">
+    <img src="https://img.shields.io/badge/Kafka-0DB7ED?style=flat-square&logo=apache-kafka&logoColor=000000&labelColor=2E2E2E&color=0DB7ED" alt="Kafka">
+    <img src="https://img.shields.io/badge/Jupyter-0DB7ED?style=flat-square&logo=jupyter&logoColor=F37626&labelColor=2E2E2E&color=0DB7ED" alt="Jupyter">
+    <img src="https://img.shields.io/badge/MinIO-0DB7ED?style=flat-square&logo=minio&logoColor=C4292F&labelColor=2E2E2E&color=0DB7ED" alt="MinIO">
+    <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License">
+    <img src="https://img.shields.io/badge/Version-1.0-blue?style=flat-square" alt="Version 1.0">
 </div>
+
+---
+
+## 📖 Índice
+
+- [Visão Geral](#visão-geral)
+- [Propósito de Cada Aplicação](#propósito-de-cada-aplicação)
+- [Arquitetura](#arquitetura)
+- [Pré-requisitos](#pré-requisitos)
+- [Instalação](#instalação)
+- [Uso](#uso)
+- [Estrutura de Diretórios](#estrutura-de-diretórios)
+- [Solução de Problemas](#solução-de-problemas)
+- [Contribuição](#contribuição)
+- [Licença](#licença)
+- [Documentação C4](#documentação-c4)
 
 ---
 
@@ -49,7 +73,7 @@ Este projeto configura um ambiente de desenvolvimento para ciência de dados uti
 
 ### Diagrama
 ```
-[PostgreSQL:"..":5432] <-> [PgAdmin:5050]
+[PostgreSQL:5432] <-> [PgAdmin:5050]
     |                [Airflow:8080] <-> [Shared Folder] <-> [Delta Lake]
 [Kafka:9092] <-> [Zookeeper:2181] <-> [Kafka UI:8082]
 [Spark Master:7077,8081] <-> [Spark Worker] <-> [Shared Folder] <-> [Delta Lake]
@@ -208,8 +232,14 @@ Licença MIT.
 
 ---
 
+## 📚 Documentação C4
+
+Consulte a [Documentação C4](c4_documentation.md) para uma visão detalhada da arquitetura no modelo C4 (Contexto, Contêiner, Componente).
+
+---
+
 <div align="center">
     <h3>Desenvolvido por Mauricio A. Almeida</h3>
-    <a href="https://github.com/mauricioaalmeida"><img src="https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white" alt="GitHub"></a>
-    <a href="https://linkedin.com/in/mauricioaalmeida"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+    <a href="https://github.com/mauricioaalmeida"><img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=FFFFFF" alt="GitHub"></a>
+    <a href="https://linkedin.com/in/mauricioaalmeida"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat-square&logo=linkedin&logoColor=FFFFFF" alt="LinkedIn"></a>
 </div>
