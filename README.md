@@ -97,8 +97,8 @@ Este projeto configura um ambiente de desenvolvimento para ciência de dados uti
 
 1. **Clone o Repositório**
    ```bash
-   git clone <url-do-repositório>
-   cd <nome-do-repositório>
+   git clone https://github.com/mauricioaalmeida/DataOps.git
+   cd DataOps
    ```
 
 2. **Crie o Arquivo `.env`**
