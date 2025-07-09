@@ -1,9 +1,7 @@
 <div align="center">
     <h1>Ambiente de Desenvolvimento para Ciência de Dados</h1>
     <p>Um ambiente local completo para ciência de dados com Docker Compose, integrando ferramentas para armazenamento, processamento, orquestração e análise.</p>
-    <img src="https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white" alt="Docker">
-    <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License">
-    <img src="https://img.shields.io/badge/Version-1.0-blue.svg" alt="Version 1.0">
+    <img src="https://img.shields.io/badge/-Docker%20|%20PostgreSQL%20|%20Airflow%20|%20Spark%20|%20Kafka%20|%20Jupyter%20|%20MinIO%20|%20License:%20MIT%20|%20Version:%201.0-000000?logo=docker&style=flat&logoColor=white&labelColor=2496ED" alt="Tools and Metadata">
 </div>
 
 ---
@@ -11,19 +9,6 @@
 ## 📖 Visão Geral
 
 Este projeto configura um ambiente de desenvolvimento para ciência de dados utilizando **Docker Compose**, com ferramentas integradas para armazenamento, processamento, orquestração, mensagens e análise interativa. Todos os dados são persistidos em um volume unificado (`./data`) no host, com uma pasta compartilhada (`./data/shared`) e um volume Delta Lake (`./data/delta_lake`) para a arquitetura medalhão (Bronze, Silver, Gold). O armazenamento centralizado é gerenciado por **MinIO**, com conexões seguras via credenciais no arquivo `.env`.
-
-<div align="center">
-    <h3>Ferramentas Utilizadas</h3>
-    <img src="https://www.postgresql.org/favicon.ico" alt="PostgreSQL" width="40" height="40">
-    <img src="https://www.pgadmin.org/static/img/favicon.ico" alt="PgAdmin" width="40" height="40">
-    <img src="https://airflow.apache.org/images/airflow-logo.png" alt="Airflow" width="40" height="40">
-    <img src="https://spark.apache.org/images/spark-logo-trademark.png" alt="Spark" width="40" height="40">
-    <img src="https://kafka.apache.org/images/logo.png" alt="Kafka" width="40" height="40">
-    <img src="https://zookeeper.apache.org/images/zookeeper_small.png" alt="Zookeeper" width="40" height="40">
-    <img src="https://raw.githubusercontent.com/provectus/kafka-ui/master/docs/images/favicon.png" alt="Kafka UI" width="40" height="40">
-    <img src="https://jupyter.org/assets/favicon.ico" alt="Jupyter" width="40" height="40">
-    <img src="https://min.io/resources/img/logo.svg" alt="MinIO" width="40" height="40">
-</div>
 
 ---
 
@@ -64,7 +49,7 @@ Este projeto configura um ambiente de desenvolvimento para ciência de dados uti
 
 ### Diagrama
 ```
-[PostgreSQL:5432] <-> [PgAdmin:5050]
+[PostgreSQL:"..":5432] <-> [PgAdmin:5050]
     |                [Airflow:8080] <-> [Shared Folder] <-> [Delta Lake]
 [Kafka:9092] <-> [Zookeeper:2181] <-> [Kafka UI:8082]
 [Spark Master:7077,8081] <-> [Spark Worker] <-> [Shared Folder] <-> [Delta Lake]
