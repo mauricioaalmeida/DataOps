@@ -1,0 +1,15 @@
+# Use the official Jupyter image as a base
+FROM jupyter/datascience-notebook:latest
+
+# Switch to root to install system-level packages
+USER root
+
+# Copy the requirements file
+COPY requirements.txt /requirements.txt
+
+# Install Python dependencies into the main environment.
+# The --user flag is incompatible with the virtualenv setup in the base image.
+RUN pip install --no-cache-dir -r /requirements.txt
+
+# Switch back to the default jovyan user for security
+USER ${NB_UID}

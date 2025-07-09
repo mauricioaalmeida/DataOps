@@ -1,0 +1,15 @@
+# Core libraries for the example pipeline
+yfinance
+psycopg2-binary
+kafka-python
+pandas
+numpy
+matplotlib
+seaborn
+datetime
+requests
+
+# Common Data Science & System Integration libraries
+scikit-learn
+boto3
+apache-airflow-providers-apache-spark

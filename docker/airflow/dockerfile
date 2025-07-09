@@ -1,0 +1,9 @@
+# Use the official Airflow image as a base. It already contains Airflow.
+FROM apache/airflow:slim-3.0.3rc4-python3.12
+
+# The default user is 'airflow'. Copy the requirements file into the user's
+# WORKDIR (/opt/airflow) and ensure the 'airflow' user has ownership.
+COPY --chown=airflow:root requirements.txt .
+
+# Install only the additional Python dependencies from the requirements file.
+RUN pip install --no-cache-dir -r requirements.txt
