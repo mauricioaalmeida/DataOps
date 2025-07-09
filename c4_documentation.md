@@ -138,7 +138,7 @@ O nível de código (e.g., classes, métodos) não é detalhado, pois o sistema 
 ---
 
 ## Instruções de Uso
-Consulte o `README.md` (artifact ID: `1f7812b6-cb26-4837-877a-54116d6d6652`) para detalhes sobre instalação, uso e solução de problemas.
+Consulte o `README.md` para detalhes sobre instalação, uso e solução de problemas.
 
 ---
 

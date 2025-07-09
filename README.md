@@ -9,7 +9,7 @@
     <img src="https://img.shields.io/badge/Jupyter-0DB7ED?style=flat-square&logo=jupyter&logoColor=F37626&labelColor=2E2E2E&color=0DB7ED" alt="Jupyter">
     <img src="https://img.shields.io/badge/MinIO-0DB7ED?style=flat-square&logo=minio&logoColor=C4292F&labelColor=2E2E2E&color=0DB7ED" alt="MinIO">
     <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License">
-    <img src="https://img.shields.io/badge/Version-1.0-blue?style=flat-square" alt="Version 1.0">
+    <img src="https://img.shields.io/badge/Version-0.80.0-blue?style=flat-square" alt="Version 0.80">
 </div>
 
 ---

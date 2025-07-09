@@ -30,9 +30,35 @@ services:
         condition: service_healthy
     networks:
       - ds-network
+  
+  # Airflow Scheduler: Handles DB initialization, user creation, and task scheduling
+  airflow-scheduler:
+    image: apache/airflow:2.10.2
+    env_file:
+      - .env
+    volumes:
+      - ./data/airflow/dags:/opt/airflow/dags
+      - ./data/airflow/logs:/opt/airflow/logs
+      - ./data/airflow/plugins:/opt/airflow/plugins
+      - ./data/shared:/opt/airflow/shared
+      - ./data/delta_lake:/opt/airflow/delta_lake
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      bash -c "airflow db init && 
+               airflow users create --username admin --password $$AIRFLOW_ADMIN_PASSWORD --firstname Admin --lastname User --role Admin --email admin@example.com || true && 
+               airflow scheduler"
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname $$(hostname)"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    networks:
+      - ds-network
 
-  # Apache Airflow
-  airflow:
+  # Airflow Webserver: The UI for Airflow
+  airflow-webserver:
     image: apache/airflow:2.10.2
     env_file:
       - .env
@@ -45,12 +71,9 @@ services:
       - ./data/shared:/opt/airflow/shared
       - ./data/delta_lake:/opt/airflow/delta_lake
     depends_on:
-      postgres:
+      airflow-scheduler:
         condition: service_healthy
-    command: >
-      bash -c "airflow db init && 
-               airflow users create --username admin --password $AIRFLOW_ADMIN_PASSWORD --firstname Admin --lastname User --role Admin --email admin@example.com && 
-               airflow webserver"
+    command: "airflow webserver"
     networks:
       - ds-network
 
