@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -9,7 +7,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -26,7 +24,7 @@ services:
     ports:
       - "5050:80"
     volumes:
-      - ./pgadmin_data:/var/lib/pgadmin
+      - ./data/pgadmin:/var/lib/pgadmin
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,9 +39,11 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./airflow_dags:/opt/airflow/dags
-      - ./airflow_logs:/opt/airflow/logs
-      - ./airflow_plugins:/opt/airflow/plugins
+      - ./data/airflow/dags:/opt/airflow/dags
+      - ./data/airflow/logs:/opt/airflow/logs
+      - ./data/airflow/plugins:/opt/airflow/plugins
+      - ./data/shared:/opt/airflow/shared
+      - ./data/delta_lake:/opt/airflow/delta_lake
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,11 +61,19 @@ services:
       - SPARK_MODE=master
       - SPARK_RPC_AUTHENTICATION_ENABLED=no
       - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - SPARK_CONF_spark.hadoop.fs.s3a.endpoint=http://minio:9000
+      - SPARK_CONF_spark.hadoop.fs.s3a.path.style.access=true
     ports:
       - "7077:7077"
       - "8081:8080"
     volumes:
-      - ./spark_data:/opt/bitnami/spark/data
+      - ./data/spark:/opt/bitnami/spark/data
+      - ./data/shared:/opt/bitnami/spark/shared
+      - ./data/delta_lake:/opt/bitnami/spark/delta_lake
+    env_file:
+      - .env
     networks:
       - ds-network
 
@@ -78,7 +86,7 @@ services:
     ports:
       - "18080:18080"
     volumes:
-      - ./spark_logs:/opt/bitnami/spark/logs
+      - ./data/spark/logs:/opt/bitnami/spark/logs
     depends_on:
       - spark-master
     networks:
@@ -92,8 +100,16 @@ services:
       - SPARK_MASTER_URL=spark://spark-master:7077
       - SPARK_WORKER_MEMORY=2g
       - SPARK_WORKER_CORES=2
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - SPARK_CONF_spark.hadoop.fs.s3a.endpoint=http://minio:9000
+      - SPARK_CONF_spark.hadoop.fs.s3a.path.style.access=true
     volumes:
-      - ./spark_data:/opt/bitnami/spark/data
+      - ./data/spark:/opt/bitnami/spark/data
+      - ./data/shared:/opt/bitnami/spark/shared
+      - ./data/delta_lake:/opt/bitnami/spark/delta_lake
+    env_file:
+      - .env
     depends_on:
       - spark-master
     networks:
@@ -112,7 +128,7 @@ services:
     ports:
       - "9092:9092"
     volumes:
-      - ./kafka_data:/var/lib/kafka/data
+      - ./data/kafka:/var/lib/kafka/data
     depends_on:
       - zookeeper
     networks:
@@ -127,7 +143,7 @@ services:
     ports:
       - "2181:2181"
     volumes:
-      - ./zookeeper_data:/var/lib/zookeeper/data
+      - ./data/zookeeper:/var/lib/zookeeper/data
     networks:
       - ds-network
 
@@ -151,26 +167,36 @@ services:
     image: jupyter/datascience-notebook:latest
     env_file:
       - .env
+    environment:
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - S3_ENDPOINT_URL=http://minio:9000
     ports:
       - "8888:8888"
     volumes:
-      - ./notebooks:/home/jovyan/work
-      - ./scripts:/home/jovyan/scripts
+      - ./data/notebooks:/home/jovyan/work
+      - ./data/scripts:/home/jovyan/scripts
+      - ./data/shared:/home/jovyan/shared
+      - ./data/delta_lake:/home/jovyan/delta_lake
+    networks:
+      - ds-network
+
+  # MinIO for centralized storage
+  minio:
+    image: minio/minio:latest
+    env_file:
+      - .env
+    ports:
+      - "9000:9000"  # MinIO API
+      - "9001:9001"  # MinIO Console
+    volumes:
+      - ./data/minio:/data
+    command: server /data --console-address ":9001"
     networks:
       - ds-network
 
 volumes:
-  postgres_data:
-  pgadmin_data:
-  airflow_dags:
-  airflow_logs:
-  airflow_plugins:
-  spark_data:
-  spark_logs:
-  kafka_data:
-  zookeeper_data:
-  notebooks:
-  scripts:
+  data:
 
 networks:
   ds-network:

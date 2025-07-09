@@ -11,18 +11,6 @@ wheels/
 .env
 
 # Docker Volumes
-postgres_data/ 
-airflow_dags/
-airflow_data/
-airflow_logs/
-airflow_plugins/
 data/
-notebooks/
-kafka_data/
-pgadmin_data/
-spark_data/
-spark_logs/
-/zookeeper_data/
-
 
 docker-compose copy.yml
